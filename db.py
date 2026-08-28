@@ -26,5 +26,19 @@ Base = declarative_base()
 
 
 def init_db():
-    """Create tables if they don't exist. Called once at app startup."""
-    Base.metadata.create_all(bind=engine)
+    """
+    Create tables if they don't exist. Called once at app startup.
+
+    Guarded with try/except because Gunicorn spawns multiple worker
+    processes, each of which imports this module independently. Without
+    this guard, two workers can race to CREATE TABLE at nearly the same
+    instant — one succeeds, the other hits "table already exists" and
+    crashes. SQLAlchemy's checkfirst does a SELECT then CREATE, which
+    isn't atomic, so the race is possible even though it's rare.
+    """
+    from sqlalchemy.exc import OperationalError
+    try:
+        Base.metadata.create_all(bind=engine)
+    except OperationalError as e:
+        if "already exists" not in str(e):
+            raise
