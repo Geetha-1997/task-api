@@ -1,3 +1,4 @@
+<img width="953" height="599" alt="image" src="https://github.com/user-attachments/assets/209b4b86-d654-42be-b57d-9ed39ba34f66" />
 # Task API — Dockerized Flask Microservice
 
 A small REST API for managing tasks, built to demonstrate containerization
