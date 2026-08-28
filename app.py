@@ -33,6 +33,17 @@ def index():
     return send_from_directory("static", "index.html")
 
 
+@app.get("/whoami")
+def whoami():
+    """
+    Debug endpoint: returns the OS process ID handling this request.
+    Refresh repeatedly with 2+ Gunicorn workers running and the pid
+    will alternate — proof requests are actually load-balanced across
+    separate processes, not just one process claiming to have several.
+    """
+    return jsonify(worker_pid=os.getpid()), 200
+
+
 @app.get("/health")
 def health():
     """
