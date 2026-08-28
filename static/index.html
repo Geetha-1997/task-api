@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>task-api — console</title>
+<style>
+  :root{
+    --bg: #0d1117;
+    --panel: #141a22;
+    --border: #232b36;
+    --text: #e6edf3;
+    --muted: #77828e;
+    --accent: #3ddc97;
+    --accent-dim: #1f4f3c;
+    --warn: #f0b429;
+    --danger: #f0625a;
+    --danger-dim: #3a2224;
+    --mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 32px 16px 64px;
+  }
+  .wrap{ max-width: 720px; margin: 0 auto; }
+
+  /* top bar */
+  .topbar{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom: 28px; flex-wrap: wrap; gap: 12px;
+  }
+  .brand{ display:flex; align-items:baseline; gap:10px; }
+  .brand h1{
+    font-family: var(--mono); font-size: 18px; font-weight: 600;
+    margin:0; letter-spacing: 0.02em;
+  }
+  .brand .tag{
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px;
+  }
+  .health{
+    font-family: var(--mono); font-size: 12px; color: var(--muted);
+    display:flex; align-items:center; gap: 8px;
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 10px; background: var(--panel);
+  }
+  .dot{
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted); flex-shrink:0;
+  }
+  .dot.ok{ background: var(--accent); box-shadow: 0 0 0 0 rgba(61,220,151,.6); animation: pulse 2s infinite; }
+  .dot.bad{ background: var(--danger); }
+  @keyframes pulse{
+    0%{ box-shadow: 0 0 0 0 rgba(61,220,151,.5); }
+    70%{ box-shadow: 0 0 0 6px rgba(61,220,151,0); }
+    100%{ box-shadow: 0 0 0 0 rgba(61,220,151,0); }
+  }
+
+  /* add row */
+  .add-row{
+    display:flex; gap: 8px; margin-bottom: 20px;
+  }
+  .prompt{
+    font-family: var(--mono); color: var(--accent); font-size: 14px;
+    display:flex; align-items:center; padding: 0 4px;
+  }
+  input[type="text"]{
+    flex:1; background: var(--panel); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--mono); font-size: 14px;
+    padding: 11px 12px; border-radius: 6px; outline: none;
+  }
+  input[type="text"]::placeholder{ color: var(--muted); }
+  input[type="text"]:focus{ border-color: var(--accent); }
+  button{
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 0 18px; cursor: pointer; background: var(--panel); color: var(--text);
+    transition: background .15s, border-color .15s;
+  }
+  button:focus-visible{ outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn-add{ background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+  .btn-add:hover{ background: var(--accent); color: #06120d; }
+  .btn-add:disabled{ opacity:.5; cursor: default; }
+
+  /* list panel */
+  .panel{
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden;
+  }
+  .panel-head{
+    display:flex; justify-content: space-between; padding: 10px 14px;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: .05em;
+  }
+  ul{ list-style: none; margin:0; padding:0; }
+  li{
+    display:flex; align-items:center; gap: 12px;
+    padding: 12px 14px; border-bottom: 1px solid var(--border);
+  }
+  li:last-child{ border-bottom: none; }
+  .chk{
+    width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid var(--muted);
+    background: transparent; cursor: pointer; flex-shrink:0; position: relative;
+    padding:0;
+  }
+  .chk.done{ background: var(--accent); border-color: var(--accent); }
+  .chk.done::after{
+    content:""; position:absolute; left:5px; top:1px; width:4px; height:9px;
+    border: solid #06120d; border-width: 0 2px 2px 0; transform: rotate(45deg);
+  }
+  .task-title{ flex:1; font-size: 14px; }
+  .task-title.done{ color: var(--muted); text-decoration: line-through; }
+  .task-time{ font-family: var(--mono); font-size: 11px; color: var(--muted); white-space:nowrap; }
+  .btn-del{
+    font-family: var(--mono); font-size: 12px; color: var(--muted);
+    border: none; background: transparent; padding: 4px 8px; border-radius: 4px;
+    opacity: 0; transition: opacity .12s, color .12s, background .12s;
+  }
+  li:hover .btn-del, li:focus-within .btn-del{ opacity: 1; }
+  .btn-del:hover{ color: var(--danger); background: var(--danger-dim); }
+
+  .empty{
+    padding: 32px 14px; text-align:center; font-family: var(--mono);
+    font-size: 13px; color: var(--muted);
+  }
+  .footer-note{
+    margin-top: 18px; font-family: var(--mono); font-size: 11px; color: var(--muted); text-align:center;
+  }
+  @media (max-width: 480px){
+    .task-time{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <h1>task-api</h1>
+      <span class="tag">v1.2.0</span>
+    </div>
+    <div class="health" id="health">
+      <span class="dot" id="healthDot"></span>
+      <span id="healthText">checking…</span>
+    </div>
+  </div>
+
+  <div class="add-row">
+    <input type="text" id="titleInput" placeholder="new task title…" maxlength="120" />
+    <button class="btn-add" id="addBtn">ADD</button>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <span id="countLabel">tasks</span>
+      <span id="doneLabel"></span>
+    </div>
+    <ul id="taskList"></ul>
+    <div class="empty" id="emptyState" style="display:none;">no tasks — add one above</div>
+  </div>
+
+  <div class="footer-note">GET/POST/PATCH/DELETE against a Flask + SQLAlchemy backend</div>
+</div>
+
+<script>
+const API = "";
+
+async function fetchHealth(){
+  const dot = document.getElementById('healthDot');
+  const text = document.getElementById('healthText');
+  try{
+    const t0 = performance.now();
+    const res = await fetch(API + '/health');
+    const ms = Math.round(performance.now() - t0);
+    const data = await res.json();
+    if(res.ok && data.status === 'ok'){
+      dot.className = 'dot ok';
+      text.textContent = `db ${data.database} · ${ms}ms`;
+    } else {
+      dot.className = 'dot bad';
+      text.textContent = 'unhealthy';
+    }
+  }catch(e){
+    dot.className = 'dot bad';
+    text.textContent = 'unreachable';
+  }
+}
+
+function timeAgo(iso){
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if(diff < 60) return 'just now';
+  if(diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if(diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
+
+async function fetchTasks(){
+  const res = await fetch(API + '/tasks');
+  const tasks = await res.json();
+  renderTasks(tasks);
+}
+
+function renderTasks(tasks){
+  const list = document.getElementById('taskList');
+  const empty = document.getElementById('emptyState');
+  const countLabel = document.getElementById('countLabel');
+  const doneLabel = document.getElementById('doneLabel');
+
+  list.innerHTML = '';
+  countLabel.textContent = `${tasks.length} task${tasks.length === 1 ? '' : 's'}`;
+  const doneCount = tasks.filter(t => t.done).length;
+  doneLabel.textContent = tasks.length ? `${doneCount} done` : '';
+
+  if(tasks.length === 0){
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  for(const task of tasks){
+    const li = document.createElement('li');
+
+    const chk = document.createElement('button');
+    chk.className = 'chk' + (task.done ? ' done' : '');
+    chk.setAttribute('aria-label', task.done ? 'Mark as not done' : 'Mark as done');
+    chk.onclick = () => toggleDone(task.id, !task.done);
+
+    const title = document.createElement('span');
+    title.className = 'task-title' + (task.done ? ' done' : '');
+    title.textContent = task.title;
+
+    const time = document.createElement('span');
+    time.className = 'task-time';
+    time.textContent = timeAgo(task.created_at);
+
+    const del = document.createElement('button');
+    del.className = 'btn-del';
+    del.textContent = 'delete';
+    del.setAttribute('aria-label', `Delete "${task.title}"`);
+    del.onclick = () => deleteTask(task.id);
+
+    li.append(chk, title, time, del);
+    list.appendChild(li);
+  }
+}
+
+async function addTask(){
+  const input = document.getElementById('titleInput');
+  const btn = document.getElementById('addBtn');
+  const title = input.value.trim();
+  if(!title) return;
+  btn.disabled = true;
+  try{
+    await fetch(API + '/tasks', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({title})
+    });
+    input.value = '';
+    await fetchTasks();
+  } finally {
+    btn.disabled = false;
+    input.focus();
+  }
+}
+
+async function toggleDone(id, done){
+  await fetch(API + `/tasks/${id}`, {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({done})
+  });
+  fetchTasks();
+}
+
+async function deleteTask(id){
+  await fetch(API + `/tasks/${id}`, { method: 'DELETE' });
+  fetchTasks();
+}
+
+document.getElementById('addBtn').addEventListener('click', addTask);
+document.getElementById('titleInput').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') addTask();
+});
+
+fetchHealth();
+fetchTasks();
+setInterval(fetchHealth, 5000);
+</script>
+</body>
+</html>

@@ -11,13 +11,13 @@ Endpoints:
 
 import os
 from datetime import datetime, timezone
-from flask import Flask, jsonify, request, abort
+from flask import Flask, jsonify, request, abort, send_from_directory
 from sqlalchemy import text
 
 from db import SessionLocal, init_db, engine
 from models import Task
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static", static_url_path="/static")
 
 # Create tables on startup (idempotent — no-op if they already exist).
 init_db()
@@ -25,6 +25,12 @@ init_db()
 
 def get_session():
     return SessionLocal()
+
+
+@app.get("/")
+def index():
+    """Serves the dashboard UI."""
+    return send_from_directory("static", "index.html")
 
 
 @app.get("/health")
@@ -84,6 +90,25 @@ def get_task(task_id):
         task = session.get(Task, task_id)
         if not task:
             abort(404, description="Task not found")
+        return jsonify(task.to_dict()), 200
+    finally:
+        session.close()
+
+
+@app.patch("/tasks/<int:task_id>")
+def update_task(task_id):
+    data = request.get_json(silent=True) or {}
+    session = get_session()
+    try:
+        task = session.get(Task, task_id)
+        if not task:
+            abort(404, description="Task not found")
+        if "done" in data:
+            task.done = bool(data["done"])
+        if "title" in data and data["title"]:
+            task.title = data["title"]
+        session.commit()
+        session.refresh(task)
         return jsonify(task.to_dict()), 200
     finally:
         session.close()

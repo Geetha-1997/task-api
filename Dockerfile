@@ -16,6 +16,7 @@ WORKDIR /app
 # Bring in installed packages from the builder stage
 COPY --from=builder /root/.local /home/appuser/.local
 COPY app.py db.py models.py .
+COPY static ./static
 
 # Directory for the SQLite file (mounted as a volume for persistence).
 # Owned by appuser so the non-root process can write to it.
