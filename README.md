@@ -6,13 +6,29 @@ and a production WSGI server (Gunicorn) instead of Flask's dev server.
 
 ## Features
 - REST endpoints for creating, listing, retrieving, and deleting tasks
-- `/health` endpoint for liveness/readiness checks (Docker `HEALTHCHECK`,
-  and ready to wire into a Kubernetes probe)
+- Persisted to a real database via SQLAlchemy — SQLite by default,
+  swappable to Postgres with one environment variable
+- `/health` endpoint that checks actual database connectivity, not just
+  that the web process is alive — and is ready to wire into a
+  Kubernetes liveness/readiness probe
 - Multi-stage Dockerfile for a lean, non-root runtime image
-- `docker-compose.yml` for one-command local startup
+- `docker-compose.yml` with a persistent volume so data survives
+  container restarts, plus a commented-out Postgres service
 
 ## Tech Stack
-Python, Flask, Gunicorn, Docker, Docker Compose
+Python, Flask, SQLAlchemy, Gunicorn, Docker, Docker Compose, (optional) Postgres
+
+## Switching to Postgres
+By default this runs on SQLite with zero setup. To run against Postgres
+instead, set the `DATABASE_URL` environment variable:
+
+```bash
+export DATABASE_URL=postgresql://user:pass@host:5432/dbname
+```
+
+No code changes needed — `db.py` reads this at startup. The
+`docker-compose.yml` has a commented-out Postgres service ready to
+uncomment for local testing against a real Postgres instance.
 
 ## Run locally with Docker
 
@@ -50,9 +66,11 @@ curl http://localhost:5000/tasks
 ```
 
 ## Roadmap
+- [x] Persist data with a real database (SQLAlchemy, SQLite/Postgres)
 - [ ] Push image to Docker Hub / ECR / ACR
 - [ ] Deploy to AWS EKS
 - [ ] Deploy to Azure AKS
+- [ ] Run against managed Postgres (AWS RDS / Azure Database for PostgreSQL)
 - [ ] Wire up a GitHub Actions pipeline to build once, deploy to both clusters
 - [ ] Add Prometheus metrics endpoint
 
